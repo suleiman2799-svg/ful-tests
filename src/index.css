@@ -50,6 +50,10 @@ body {
 }
 
 input, textarea, select { font: inherit; }
+.no-select input, .no-select textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

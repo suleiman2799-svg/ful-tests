@@ -8,6 +8,7 @@ import Results from './pages/Results'
 import QuestionBank from './pages/QuestionBank'
 import StudentEntry from './pages/StudentEntry'
 import Exam from './pages/Exam'
+import CheckResult from './pages/CheckResult'
 import NotFound from './pages/NotFound'
 
 const guard = (el) => <RequireAuth>{el}</RequireAuth>
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/lecturer/bank" element={guard(<QuestionBank />)} />
       <Route path="/t/:slug" element={<StudentEntry />} />
       <Route path="/t/:slug/exam" element={<Exam />} />
+      <Route path="/t/:slug/result" element={<CheckResult />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
