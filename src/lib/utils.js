@@ -79,3 +79,9 @@ export async function copyText(text) {
 }
 
 export const supportsFullscreen = () => Boolean(document.documentElement.requestFullscreen)
+
+/** 7.5 -> "7.5", 8 -> "8", 8.333 -> "8.33" */
+export const fmtNum = (n) =>
+  n === null || n === undefined || n === '' ? '-' : String(Math.round(Number(n) * 100) / 100)
+
+export const TYPE_LABEL = { mcq: 'Multiple choice', tf: 'True / False', short: 'Short answer' }
