@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 244 246 250;
+  --surface: 255 255 255;
+  --line: 215 222 236;
+  --text: 17 28 52;
+  --muted: 96 109 134;
+  --brand: 31 78 158;
+  --brand-ink: 255 255 255;
+  --brand-soft: 229 237 250;
+  --gold: 163 117 20;
+  --danger: 187 40 40;
+  --ok: 21 118 74;
+}
+
+.dark {
+  --bg: 10 16 30;
+  --surface: 18 27 47;
+  --line: 40 54 84;
+  --text: 230 236 247;
+  --muted: 140 155 182;
+  --brand: 120 165 242;
+  --brand-ink: 8 16 32;
+  --brand-soft: 24 40 72;
+  --gold: 226 178 82;
+  --danger: 242 120 120;
+  --ok: 84 202 142;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  @apply bg-bg font-sans text-text antialiased;
+  min-height: 100vh;
+}
+
+.watermark { mix-blend-mode: multiply; }
+.dark .watermark { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
+
+.page-in { animation: pagein 0.22s ease-out both; }
+@keyframes pagein { from { opacity: 0; } to { opacity: 1; } }
+
+.no-select, .no-select * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, select { font: inherit; }
+.no-select input, .no-select textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
