@@ -66,6 +66,10 @@ export default function StudentEntry() {
     [Maximize, 'The test runs in fullscreen. Do not refresh the page. Copying and pasting are disabled.'],
     [ListChecks, 'Your answers save as you go. When time runs out, the test submits itself.'],
   ]
+  if (Number(info.negative_marking) > 0) {
+    rules.push([ListChecks, `Wrong answers to multiple-choice and true/false questions lose ${Math.round(info.negative_marking * 100)}% of that question's marks. Questions you leave blank lose nothing.`])
+  }
+  if (info.pass_mark != null) rules.push([ListChecks, `The pass mark is ${Number(info.pass_mark)}%.`])
 
   return (
     <Shell>
@@ -84,6 +88,16 @@ export default function StudentEntry() {
           </div>
           {info.status === 'upcoming' && <p className="mt-3 text-sm text-muted">Opens {fmtDate(info.opens_at)}.</p>}
           {info.closes_at && info.status === 'open' && <p className="mt-3 text-sm text-muted">Closes {fmtDate(info.closes_at)}.</p>}
+          {info.announcements?.length > 0 && (
+            <div className="mt-5 space-y-2">
+              {info.announcements.map((a, i) => (
+                <Alert key={i} tone="gold">
+                  <div className="whitespace-pre-line">{a.message}</div>
+                  <div className="mt-1 text-xs opacity-80">{fmtDate(a.created_at)}</div>
+                </Alert>
+              ))}
+            </div>
+          )}
           {info.instructions && (
             <div className="mt-5">
               <h2 className="font-display text-lg font-semibold">From your lecturer</h2>
@@ -135,6 +149,10 @@ export default function StudentEntry() {
             </Button>
             {blocked && <p className="text-center text-sm text-muted">{info.status === 'upcoming' ? 'This test has not opened yet.' : 'This test is closed.'}</p>}
           </form>
+          <p className="mt-5 text-center text-sm text-muted">
+            Already took this test?{' '}
+            <Link className="font-medium text-brand underline" to={`/t/${slug}/result`}>Check your result</Link>
+          </p>
         </Card>
       </div>
     </Shell>

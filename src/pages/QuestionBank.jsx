@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { Shell } from '../components/Shell'
 import { Button, Card, EmptyState, Input, Modal, Spinner, useToast } from '../components/ui'
-import QuestionEditor, { blankQuestion, validateQuestion } from '../components/QuestionEditor'
+import QuestionEditor, { answerSummary, blankQuestion, cleanQuestionFields, normalizeQuestion, validateQuestion } from '../components/QuestionEditor'
+import { TYPE_LABEL } from '../lib/utils'
 import { supabase } from '../lib/supabase'
 
 export default function QuestionBank() {
@@ -17,7 +18,7 @@ export default function QuestionBank() {
   async function load() {
     const { data, error } = await supabase.from('question_bank').select('*').order('created_at', { ascending: false })
     if (error) toast(error.message, 'err')
-    setItems((data || []).map((q) => ({ ...q, image_url: q.image_url || '' })))
+    setItems((data || []).map(normalizeQuestion))
   }
   useEffect(() => { load() }, [])
 
@@ -25,10 +26,7 @@ export default function QuestionBank() {
     const msg = validateQuestion(editing, 1)
     if (msg) return toast(msg, 'err')
     setSaving(true)
-    const row = {
-      text: editing.text.trim(), image_url: editing.image_url || null,
-      options: editing.options.map((o) => o.trim()), correct_index: editing.correct_index,
-    }
+    const row = cleanQuestionFields(editing)
     const { error } = isNew
       ? await supabase.from('question_bank').insert(row)
       : await supabase.from('question_bank').update(row).eq('id', editing.id)
@@ -80,7 +78,7 @@ export default function QuestionBank() {
               <Card key={q.id} className="flex items-start justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <div className="font-medium">{q.text}</div>
-                  <div className="mt-1 text-sm text-muted">Answer: {q.options[q.correct_index]} (from {q.options.length} options)</div>
+                  <div className="mt-1 text-sm text-muted">{TYPE_LABEL[q.type]}. Answer: {answerSummary(q)}. {Number(q.marks)} mark{Number(q.marks) === 1 ? '' : 's'}.</div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button variant="secondary" size="sm" onClick={() => { setEditing(q); setIsNew(false) }}>Edit</Button>

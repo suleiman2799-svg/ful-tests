@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Clock, Grid3x3, Maximize, Send } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Clock, FileDown, Grid3x3, Maximize, Send } from 'lucide-react'
 import { Shell } from '../components/Shell'
-import { Alert, Button, Card, Modal, Spinner } from '../components/ui'
+import { Alert, Badge, Button, Card, Modal, Spinner } from '../components/ui'
 import { rpc, rpcKeepalive, supabase } from '../lib/supabase'
-import { cn, mmss, supportsFullscreen } from '../lib/utils'
+import { cn, fmtDate, fmtNum, mmss, supportsFullscreen } from '../lib/utils'
+import { downloadSlip } from '../lib/pdf'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E']
 
@@ -171,7 +172,11 @@ export default function Exam() {
 
   useEffect(() => {
     if (phase !== 'running') return
-    const stop = (e) => e.preventDefault()
+    const stop = (e) => {
+      const el = e.target instanceof Element ? e.target : e.target?.parentElement
+      if (e.type === 'selectstart' && el?.closest('input,textarea')) return
+      e.preventDefault()
+    }
     const onVis = () => { if (document.visibilityState === 'hidden') onLeave('left') }
     const onBlur = () => setTimeout(() => { if (!document.hasFocus()) onLeave('left') }, 400)
     const onFs = () => { if (supportsFullscreen() && !document.fullscreenElement) onLeave('fullscreen') }
@@ -251,7 +256,20 @@ export default function Exam() {
             {result?.released ? (
               <div className="mt-6 rounded-xl border border-line py-6">
                 <div className="font-display text-5xl font-semibold">{Number(result.percentage).toFixed(0)}%</div>
-                <div className="mt-1 text-muted">{result.score} of {result.total} correct</div>
+                <div className="mt-1 text-muted">{fmtNum(result.score)} of {fmtNum(result.total)} marks</div>
+                {result.passed !== null && result.passed !== undefined && (
+                  <div className="mt-3"><Badge tone={result.passed ? 'ok' : 'danger'}>{result.passed ? 'Pass' : 'Fail'}</Badge></div>
+                )}
+                <Button
+                  className="mt-4" variant="secondary" size="sm"
+                  onClick={() => downloadSlip({
+                    name: data.student_name, matric: data.matric, department: data.department,
+                    title: data.title, course: data.course_code, date: fmtDate(new Date()),
+                    score: result.score, total: result.total, percentage: result.percentage, passed: result.passed,
+                  })}
+                >
+                  <FileDown className="h-4 w-4" />Download result slip (PDF)
+                </Button>
               </div>
             ) : (
               <p className="mt-6 rounded-xl border border-line px-4 py-5 text-sm text-muted">
@@ -274,7 +292,9 @@ export default function Exam() {
   /* ---------- running / gate ---------- */
   const paper = data.paper
   const q = paper[cur]
-  const answered = paper.filter((p) => answers[p.id] !== undefined).length
+  const has = (id) => answers[id] !== undefined && answers[id] !== ''
+  const multi = new Set(paper.map((p) => p.section)).size > 1
+  const answered = paper.filter((p) => has(p.id)).length
   const unanswered = paper.map((p, i) => ({ p, i })).filter(({ p }) => answers[p.id] === undefined)
   const urgent = left <= 60
   const soon = left <= 300
@@ -283,7 +303,7 @@ export default function Exam() {
     <div>
       <div className="grid grid-cols-5 gap-2">
         {paper.map((p, i) => {
-          const done = answers[p.id] !== undefined
+          const done = has(p.id)
           return (
             <button
               key={p.id}
@@ -340,11 +360,25 @@ export default function Exam() {
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_290px]">
           <div>
             <Card className="p-5 sm:p-7">
-              <div className="text-sm text-muted">Question {cur + 1} of {paper.length}</div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+                <span>Question {cur + 1} of {paper.length}{multi && q.section ? `. ${q.section}` : ''}</span>
+                <span>{fmtNum(q.marks)} {Number(q.marks) === 1 ? 'mark' : 'marks'}</span>
+              </div>
               <p className="mt-2 whitespace-pre-line text-lg leading-relaxed sm:text-xl">{q.text}</p>
               {q.image_url && <img src={q.image_url} alt="" draggable={false} className="mt-4 max-h-72 rounded-lg border border-line" />}
 
-              <div className="mt-6 space-y-3" role="radiogroup" aria-label="Answer options">
+              {q.type === 'short' ? (
+                <div className="mt-6">
+                  <label htmlFor="short-answer" className="mb-1.5 block text-sm font-medium">Your answer</label>
+                  <input
+                    id="short-answer" value={answers[q.id] ?? ''} onChange={(e) => choose(q.id, e.target.value)}
+                    maxLength={300} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    placeholder="Type your answer"
+                    className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-lg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
+                  />
+                </div>
+              ) : (
+                <div className="mt-6 space-y-3" role="radiogroup" aria-label="Answer options">
                 {q.options.map((o, i) => {
                   const on = answers[q.id] === i
                   return (
@@ -366,7 +400,8 @@ export default function Exam() {
                   )
                 })}
               </div>
-              {answers[q.id] !== undefined && (
+              )}
+              {has(q.id) && (
                 <button onClick={() => clearAnswer(q.id)} className="mt-3 text-sm text-muted underline-offset-2 hover:text-text hover:underline">Clear my answer</button>
               )}
             </Card>
