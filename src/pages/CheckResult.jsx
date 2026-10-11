@@ -7,20 +7,97 @@ import { rpc } from '../lib/supabase'
 import { downloadSlip } from '../lib/pdf'
 import { fmtDate, fmtNum } from '../lib/utils'
 
+function Review({ items }) {
+  const right = items.filter((q) => q.correct === true).length
+  const wrong = items.filter((q) => q.correct === false).length
+  const skipped = items.length - right - wrong
+
+  return (
+    <Card className="mt-5 p-6">
+      <h2 className="font-display text-xl font-semibold">Your answers</h2>
+      <p className="mt-0.5 text-sm text-muted">
+        {right} correct, {wrong} wrong, {skipped} not answered.
+      </p>
+
+      <div className="mt-5 space-y-5">
+        {items.map((q, i) => (
+          <div key={q.id} className="rounded-xl border border-line p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted">Question {i + 1}</span>
+              <div className="flex items-center gap-2">
+                {q.got !== null && q.got !== undefined && (
+                  <span className="text-xs text-muted">{fmtNum(q.got)} / {fmtNum(q.marks)}</span>
+                )}
+                {q.correct === true && <Badge tone="ok">Correct</Badge>}
+                {q.correct === false && <Badge tone="danger">Wrong</Badge>}
+                {q.correct !== true && q.correct !== false && <span className="text-xs text-muted">Not answered</span>}
+              </div>
+            </div>
+
+            <p className="mt-2 whitespace-pre-wrap font-medium">{q.text}</p>
+            {q.image_url && <img src={q.image_url} alt="" className="mt-2 max-h-48 rounded-lg" />}
+
+            {q.type === 'short' ? (
+              <div className="mt-3 space-y-1.5 text-sm">
+                <div>
+                  <span className="text-muted">Your answer: </span>
+                  <span className="font-medium">{q.answer && q.answer.trim() ? q.answer : 'No answer'}</span>
+                </div>
+                {Array.isArray(q.accepted) && q.accepted.length > 0 && (
+                  <div>
+                    <span className="text-muted">Accepted answer{q.accepted.length === 1 ? '' : 's'}: </span>
+                    <span className="font-medium">{q.accepted.join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {(q.options || []).map((o, j) => {
+                  const isCorrect = j === q.correct_pos
+                  const isChosen = j === q.chosen
+                  return (
+                    <div key={j} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm">
+                      <span>{o}</span>
+                      <span className="flex items-center gap-1.5">
+                        {isCorrect && isChosen && <Badge tone="ok">Your answer, correct</Badge>}
+                        {isCorrect && !isChosen && <Badge tone="ok">Correct answer</Badge>}
+                        {!isCorrect && isChosen && <Badge tone="danger">Your answer</Badge>}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 export default function CheckResult() {
   const { slug } = useParams()
   const [form, setForm] = useState({ matric: '', email: '' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [data, setData] = useState(null)
+  const [review, setReview] = useState(null)
 
   const set = (k) => (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setErr('') }
 
   async function look(e) {
     e.preventDefault()
-    setBusy(true); setErr(''); setData(null)
+    setBusy(true); setErr(''); setData(null); setReview(null)
     try {
-      setData(await rpc('lookup_result', { p_slug: slug, p_matric: form.matric, p_email: form.email }))
+      const args = { p_slug: slug, p_matric: form.matric, p_email: form.email }
+      setData(await rpc('lookup_result', args))
+      // The answer review is optional. If it is switched off or fails, the score still shows.
+      try {
+        const rv = await rpc('lookup_review', args)
+        if (rv && rv.allowed && Array.isArray(rv.questions) && rv.questions.length) setReview(rv.questions)
+      } catch {
+        setReview(null)
+      }
     } catch (e2) {
       setErr(e2.message)
     } finally {
@@ -73,6 +150,8 @@ export default function CheckResult() {
             )}
           </Card>
         )}
+
+        {data && r?.released && review && <Review items={review} />}
       </div>
     </Shell>
   )
