@@ -16,7 +16,7 @@ const EMPTY = {
   opens_at: '', closes_at: '', access_code: '',
   shuffle_questions: true, shuffle_options: true, warn_before_submit: false,
   one_attempt: true, release_mode: 'instant', notify_email: '',
-  negative_marking: '0', pass_mark: '',
+  negative_marking: '0', pass_mark: '', review_allowed: false,
 }
 
 const newSection = (title) => ({ id: crypto.randomUUID(), title, pick_count: '', questions: [blankQuestion()] })
@@ -61,6 +61,7 @@ export default function TestEditor() {
         course_code: t.course_code || '', instructions: t.instructions || '', notify_email: t.notify_email || '',
         opens_at: toLocalInput(t.opens_at), closes_at: toLocalInput(t.closes_at),
         negative_marking: String(t.negative_marking ?? 0), pass_mark: t.pass_mark ?? '',
+        review_allowed: !!t.review_allowed,
       })
       let list = (secs || []).map((s) => ({
         id: s.id, title: s.title, pick_count: s.pick_count ?? '',
@@ -204,6 +205,7 @@ export default function TestEditor() {
         warn_before_submit: form.warn_before_submit,
         one_attempt: form.one_attempt,
         release_mode: form.release_mode,
+        review_allowed: form.review_allowed,
         notify_email: form.notify_email.trim() || null,
         negative_marking: Number(form.negative_marking) || 0,
         pass_mark: form.pass_mark === '' ? null : Number(form.pass_mark),
@@ -337,6 +339,7 @@ export default function TestEditor() {
             <Switch label="Give one warning before auto-submit" hint="The first time a student leaves the page they get a warning. The second time the test is submitted. Useful on phones where a notification can interrupt the page." checked={form.warn_before_submit} onChange={(v) => set('warn_before_submit', v)} />
             <Switch label="One attempt per matric number" hint="A student cannot retake the test once they have submitted." checked={form.one_attempt} onChange={(v) => set('one_attempt', v)} />
             <Switch label="Release scores to students instantly" hint="Turn off to hold scores until you release them from the results page." checked={form.release_mode === 'instant'} onChange={(v) => set('release_mode', v ? 'instant' : 'manual')} />
+            <Switch label="Let students review their answers" hint="After scores are released, students can see which questions they got right or wrong, and the correct answers. Turn this on only after everyone has finished the test." checked={form.review_allowed} onChange={(v) => set('review_allowed', v)} />
           </div>
         </Card>
 
